@@ -4,7 +4,7 @@ from scramble import __version__
 setup(
     name = "scrambled",
     version = __version__,
-    description = "a PyPI-compatible package server"
+    description = "a PyPI-compatible package server",
     long_description = """\
 About
 =====
@@ -24,7 +24,7 @@ Source
 
 Up-to-date sources can always be found at the `scrambled GoogleCode site
 <http://code.google.com/p/scrambled/>`_.
-"""
+""",
     url = "http://code.google.com/p/scrambled",
 
     maintainer = "Brandon Gilmore",

@@ -1,0 +1,6 @@
+usage:
+
+    scrambled [--bind=<ip_address> --port=<port>] </path/to/package_root>
+
+    done!
+
