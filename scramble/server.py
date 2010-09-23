@@ -7,19 +7,25 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 from scramble import __version__
 
 # HTML templates
-HEADER = """<html><head><title>{title}</title></head><body><h1>{title}</h1>"""
-ITEM   = """<a href="../../package/{package}">{package}</a><br/>"""
+HEADER = """<html><head><title>Links for %(package)s</title></head><body><h1>Links for %(package)s</h1>"""
+ITEM   = """<a href="%(prefix)s/%(package)s">%(package)s</a><br/>"""
 FOOTER = """</body></html>"""
 
 class PyPIHandler(SimpleHTTPRequestHandler):
-    server_version = "scrambled/{version}".format(version=__version__)
+    server_version = "scrambled/" + __version__
 
     def do_GET(self):
         if self.path.startswith("/simple/"):
-            return self.search()
+            return self.search(self.path[8:], "../../package")
+
         elif self.path.startswith("/package/"):
-            self.path = self.path[9:] # snip prefix
-            return SimpleHTTPRequestHandler.do_GET(self)
+            self.path = self.path[9:]
+
+            if not self.path:
+                return self.search(self.path, ".")
+            else:
+                return SimpleHTTPRequestHandler.do_GET(self)
+
         else:
             self.send_response(404)
             self.send_header("Content-type", "text/plain")
@@ -27,36 +33,44 @@ class PyPIHandler(SimpleHTTPRequestHandler):
 
             self.wfile.write("Not Found")
 
-    def search(self):
-        if self.path[-1] != '/':
-            self.send_response(301)
-            self.send_header("Location", self.path + "/")
+    def search(self, name, prefix):
+        if name.endswith('/'):
+            pkgname  = name[:-1]
+            packages = filter(lambda f: f.startswith(pkgname), os.listdir(self.server.pkgdir))
+        elif name == '':
+            pkgname  = 'All Packages'
+            packages = os.listdir(self.server.pkgdir)
+        else:
+            self.send_response(400)
+            self.send_header("Content-type", "text/plain")
             self.end_headers()
+
+            self.wfile.write("Bad Request")
             return
-        else:
-            pkgname  = self.path[8:-1]
 
-        packages = filter(lambda f: f.startswith(pkgname), os.listdir(self.server.pkgdir))
-        if not packages:
-            self.send_response(404)
-            self.send_header("Content-type", "text/plain")
-            self.end_headers()
-
-            self.wfile.write("Not Found")
-        else:
+        if packages:
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
 
-            self.wfile.write(HEADER.format(title="Links for " + pkgname))
+            self.wfile.write(HEADER % {'package':pkgname})
             for pkg in packages:
-                self.wfile.write(ITEM.format(package=pkg))
+                self.wfile.write(ITEM % {'prefix':prefix, 'package':pkg})
             self.wfile.write(FOOTER)
+        else:
+            self.send_response(404)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+
+            if name:
+                self.wfile.write("Not Found (%(package)s does not have any releases)" % {'package': pkgname})
+            else:
+                self.wfile.write("Not Found")
 
 
 def run():
     parser = optparse.OptionParser(usage="usage: %prog [options] package_directory",
-                                   version="%prog {version}".format(version=__version__))
+                                   version="%prog " + __version__)
 
     parser.add_option("-b", "--bind", dest="bind", default="0.0.0.0", type="str",
                       help="address to bind to (default: %default)")
@@ -70,7 +84,7 @@ def run():
         parser.error("invalid package_dir")
 
     try:
-        sys.stderr.write("starting scrambled... [{0}:{1}]\n".format(opt.bind, opt.port))
+        sys.stderr.write("starting scrambled... [%s:%s]\n" % (opt.bind, opt.port,))
         server = HTTPServer((opt.bind, opt.port), PyPIHandler)
         server.pkgdir = arg[0]
 
