@@ -14,11 +14,22 @@ FOOTER = """</body></html>"""
 class PyPIHandler(SimpleHTTPRequestHandler):
     server_version = "scrambled/" + __version__
 
+    def respond(self, code=200, type='text/plain'):
+        self.send_response(code)
+        self.send_header("Content-type", type)
+        self.end_headers()
+
     def do_GET(self):
         if self.path.startswith("/simple/"):
             return self.search(self.path[8:], "../../package")
 
         elif self.path.startswith("/package/"):
+            if self.path.rpartition('/')[-1].startswith('.'):
+                # no access to dotfiles
+                self.respond(403)
+                self.wfile.write("Forbidden")
+                return
+
             self.path = self.path[9:]
 
             if not self.path:
@@ -27,10 +38,7 @@ class PyPIHandler(SimpleHTTPRequestHandler):
                 return SimpleHTTPRequestHandler.do_GET(self)
 
         else:
-            self.send_response(404)
-            self.send_header("Content-type", "text/plain")
-            self.end_headers()
-
+            self.respond(404)
             self.wfile.write("Not Found")
 
     def search(self, name, prefix):
@@ -39,29 +47,20 @@ class PyPIHandler(SimpleHTTPRequestHandler):
             packages = filter(lambda f: f.startswith(pkgname), os.listdir(self.server.pkgdir))
         elif name == '':
             pkgname  = 'All Packages'
-            packages = os.listdir(self.server.pkgdir)
+            packages = filter(lambda f: not f.startswith('.'), os.listdir(self.server.pkgdir))
         else:
-            self.send_response(400)
-            self.send_header("Content-type", "text/plain")
-            self.end_headers()
-
+            self.respond(400)
             self.wfile.write("Bad Request")
             return
 
         if packages:
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-
+            self.respond(200, type="text/html")
             self.wfile.write(HEADER % {'package':pkgname})
             for pkg in packages:
                 self.wfile.write(ITEM % {'prefix':prefix, 'package':pkg})
             self.wfile.write(FOOTER)
         else:
-            self.send_response(404)
-            self.send_header("Content-type", "text/plain")
-            self.end_headers()
-
+            self.respond(404)
             if name:
                 self.wfile.write("Not Found (%(package)s does not have any releases)" % {'package': pkgname})
             else:
