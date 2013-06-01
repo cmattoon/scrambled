@@ -21,7 +21,7 @@ class PyPIHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/simple/"):
-            return self.search(self.path[8:], "../../package")
+            return self.search(self.path[8:], "../package")
 
         elif self.path.startswith("/package/"):
             if self.path.rpartition('/')[-1].startswith('.'):
