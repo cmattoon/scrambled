@@ -1,5 +1,6 @@
 import optparse
 import os
+import os.path
 import sys
 
 from BaseHTTPServer import HTTPServer
@@ -85,7 +86,7 @@ def run():
     try:
         sys.stderr.write("starting scrambled... [%s:%s]\n" % (opt.bind, opt.port,))
         server = HTTPServer((opt.bind, opt.port), PyPIHandler)
-        server.pkgdir = arg[0]
+        server.pkgdir = os.path.abspath(arg[0])
 
         os.chdir(server.pkgdir)
         server.serve_forever()
