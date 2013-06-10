@@ -1,6 +1,7 @@
 import optparse
 import os
 import os.path
+import posixpath
 import sys
 
 from BaseHTTPServer import HTTPServer
@@ -24,7 +25,7 @@ class PyPIHandler(SimpleHTTPRequestHandler):
         if self.path.startswith("/simple/"):
             return self.search(
                 self.path[8:],
-                os.path.relpath("/package", self.path)
+                posixpath.relpath("/package", self.path)
                 )
 
         elif self.path.startswith("/package/"):
